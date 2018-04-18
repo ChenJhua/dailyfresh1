@@ -1,9 +1,14 @@
 # coding=utf-8
+from django.core.paginator import Paginator
 from django.http import HttpResponseRedirect
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+
+from df_order.models import *
 from models import *
 from hashlib import sha1
+from . import user_decorator
+from df_goods.models import *
 
 
 def register(request):
@@ -57,7 +62,10 @@ def login_handle(request):
         s1 = sha1()
         s1.update(upwd)
         if s1.hexdigest() == users[0].upwd:
-            redit = HttpResponseRedirect('/user/info/')
+            url = request.COOKIES.get('url', '/')
+            redit = HttpResponseRedirect(url)
+            # 成功后删除转向地址，防止以后直接登录造成的转向
+            redit.set_cookie('url', '', max_age=-1)
             # 记住用户名
             if jizhu != 0:
                 redit.set_cookie("uname", uname)
@@ -74,17 +82,44 @@ def login_handle(request):
         return render(request, 'df_user/login.html', context)
 
 
+def logout(request):
+    request.session.flush()
+    return redirect('/')
+
+
+@user_decorator.login
 def info(request):
     users = UserInfo.objects.get(id=request.session['user_id'])
-    context = {"title": "用户中心", "users": users}
+    # 最近浏览
+    goods_ids = request.COOKIES.get('goods_ids', '')
+    goods_list = []
+    if goods_ids != '':
+        goods_ids1 = goods_ids.split(',')  # ['']
+        # GoodsInfo.objects.filter(id__in=goods_ids1)
+        for goods_id in goods_ids1:
+            goods_list.append(GoodsInfo.objects.get(id=int(goods_id)))
+    context = {"title": "用户中心", "users": users, 'page_name': 1,
+               'goods_list': goods_list
+               }
     return render(request, 'df_user/user_center_info.html', context)
 
 
-def order(request):
-    context = {"title": "用户中心"}
+@user_decorator.login
+def order(request, pindex):
+    order_list = OrderInfo.objects.filter(user_id=request.session['user_id']).order_by('-oid')
+    paginator = Paginator(order_list, 2)
+    if pindex == '':
+        pindex = '1'
+    page = paginator.page(int(pindex))
+
+    context = {'title': '用户中心',
+               'page_name': 1,
+               'paginator': paginator,
+               'page': page, }
     return render(request, 'df_user/user_center_order.html', context)
 
 
+@user_decorator.login
 def site(request):
     user = UserInfo.objects.get(id=request.session['user_id'])
     if request.method == 'POST':
@@ -94,5 +129,5 @@ def site(request):
         user.uyoubian = post.get('uyoubian')
         user.uphone = post.get('uphone')
         user.save()
-    context = {"title": "用户中心", "user": user}
+    context = {"title": "用户中心", "user": user, 'page_name': 1}
     return render(request, 'df_user/user_center_site.html', context)

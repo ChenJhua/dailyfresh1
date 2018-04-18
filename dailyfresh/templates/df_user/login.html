@@ -13,7 +13,9 @@
 		    $('.pwd_error').html('密码错误').show()
 		}
 		// 判断用户名输入框
-		$('.name_input').blur(function () {
+		$('.name_input').blur(check_user);
+
+		function check_user() {
 			if($('.name_input').val().length == 0){
 			    $('.user_error').html('请填写用户名').show()
 				name_error = false
@@ -21,19 +23,23 @@
 			    $('.user_error').hide()
 				name_error = true
 			}
-        });
+		}
 		// 判断密码输入框
-		$('.pass_input').blur(function () {
+		$('.pass_input').blur(check_pwd);
+
+		function check_pwd() {
 			if($('.pass_input').val().length == 0){
-			    $('.pwd_error').html('请填写用户名').show()
+			    $('.pwd_error').html('请填写密码').show()
 				pwd_error = false
 			}else{
 			    $('.pwd_error').hide()
 				pwd_error = true
 			}
-        });
+        }
 
 		$('form').submit(function () {
+		    check_user()
+			check_pwd()
 			if(name_error && pwd_error){
 			    return true;
 			}else{
@@ -56,7 +62,7 @@
 			<div class="login_form fr">
 				<div class="login_title clearfix">
 					<h1>用户登录</h1>
-					<a href="#">立即注册</a>
+					<a href="/user/register/">立即注册</a>
 				</div>
 				<div class="form_input">
 					<form action="/user/login_handle/" method="post">
